@@ -155,7 +155,7 @@ const API_VERSION = '2026-01';
 
 // ─── State ───────────────────────────────────────────────────────
 let state = {
-  view: 'setup', // setup | dashboard | editor | schema
+  view: 'setup', // setup | dashboard | editor | schema | migration
   token: localStorage.getItem('e3_token') || '',
   storeDomain: localStorage.getItem('e3_store') || STORE_DOMAIN,
   ingredients: [],
@@ -374,6 +374,7 @@ function render() {
   else if (state.view === 'dashboard') app.innerHTML = renderDashboard();
   else if (state.view === 'editor') app.innerHTML = renderEditor();
   else if (state.view === 'schema') app.innerHTML = renderSchema();
+  else if (state.view === 'migration') app.innerHTML = renderMigration();
   if (state.toast) app.innerHTML += `<div class="toast toast-${state.toast.type}">${state.toast.msg}</div>`;
 }
 
@@ -450,6 +451,7 @@ function renderDashboard() {
         <div class="header-sub">${ings.length} active ingredients · element³</div>
       </div>
       <div class="btn-group">
+        <button class="btn" onclick="goMigration()" title="One-time setup: create blend_doses field, Benefit metaobject, hub page metafields, and bulk-populate launch data" style="border-color:#b98900;color:#b98900">⚡ Migration</button>
         <button class="btn" onclick="goSchema()">Manage Fields</button>
         <button class="btn btn-primary" onclick="showNewModal()">+ New Ingredient</button>
         <button class="btn btn-sm" onclick="disconnect()" title="Disconnect">Logout</button>
@@ -966,6 +968,393 @@ async function doAddField() {
     toast('Field "' + name + '" added');
     await goSchema();
   } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Migration module — one-shot setup for Our Ingredients hub page
+// ═══════════════════════════════════════════════════════════════════
+// Goal: take a fresh Shopify store with the existing Ingredient metaobject,
+// and add everything needed for templates/page.our-ingredients.liquid:
+//   1. blend_doses (JSON field on Ingredient)
+//   2. Benefit metaobject definition + entries
+//   3. ingredients_hub page metafield definitions + the values
+//   4. blend_doses values populated for all 29 launch ingredients
+//
+// Idempotent — safe to re-run if a stage fails partway. Each stage checks
+// what's already there before creating duplicates.
+
+const MIGRATION_DATA = {"ingredient_doses":{"Vitamin A":[{"blend":"rise","category":"Vitamins","dose":"700 µg","rdi":"0.7 mg/day","rdi_pct":100,"typical_diet":"~0.6–0.75 mg","warning":null}],"Vitamin B1":[{"blend":"rise","category":"Vitamins","dose":"1.1 mg","rdi":"1.1 mg/day","rdi_pct":100,"typical_diet":"~1.1–1.4 mg","warning":null}],"Vitamin B2":[{"blend":"rise","category":"Vitamins","dose":"1.1 mg","rdi":"1.1 mg/day","rdi_pct":100,"typical_diet":"~1.2–1.5 mg","warning":null}],"Vitamin B3":[{"blend":"rise","category":"Vitamins","dose":"14 mg","rdi":"14 mg NE/day","rdi_pct":100,"typical_diet":"~20–25 mg","warning":null}],"Vitamin B5":[{"blend":"rise","category":"Vitamins","dose":"4 mg","rdi":"4 mg AI/day","rdi_pct":100,"typical_diet":"~4–6 mg","warning":null}],"Vitamin B6":[{"blend":"rise","category":"Vitamins","dose":"1.5 mg","rdi":"1.3 mg/day","rdi_pct":100,"typical_diet":"~1.0–1.2 mg ↓","warning":null}],"Biotin":[{"blend":"rise","category":"Vitamins","dose":"25 µg","rdi":"25 µg AI/day","rdi_pct":100,"typical_diet":"~25–35 µg","warning":null}],"Vitamin B12":[{"blend":"rise","category":"Vitamins","dose":"2.4 µg","rdi":"2.4 µg/day","rdi_pct":100,"typical_diet":"~3–4 µg","warning":null}],"Folate (Vitamin B9)":[{"blend":"rise","category":"Vitamins","dose":"400 µg","rdi":"400 µg DFE/day","rdi_pct":100,"typical_diet":"~280–350 µg ↓","warning":null}],"Vitamin C":[{"blend":"rise","category":"Vitamins","dose":"45 mg","rdi":"45 mg/day","rdi_pct":100,"typical_diet":"~80–120 mg","warning":null}],"Vitamin D3":[{"blend":"rise","category":"Vitamins","dose":"10 µg","rdi":"10 µg AI/day","rdi_pct":100,"typical_diet":"~3 µg ↓","warning":null}],"Vitamin E":[{"blend":"rise","category":"Vitamins","dose":"7 mg","rdi":"7 mg α-TE/day","rdi_pct":100,"typical_diet":"~6–7 mg","warning":null}],"Vitamin K2 MK-7":[{"blend":"rise","category":"Vitamins","dose":"60 µg","rdi":"60 µg AI/day","rdi_pct":100,"typical_diet":"~5–15 µg ↓","warning":null}],"Trans-Resveratrol":[{"blend":"rise","category":"Nutraceuticals","dose":"75 mg","rdi":"75–1,000 mg/day","rdi_pct":10,"typical_diet":"~2–8 mg ↓","warning":null}],"Selenium":[{"blend":"rise","category":"Minerals","dose":"60 µg","rdi":"60 µg/day","rdi_pct":100,"typical_diet":"~55–65 µg","warning":null}],"PQQ":[{"blend":"rise","category":"Nutraceuticals","dose":"20 mg","rdi":"20–22 mg/day","rdi_pct":100,"typical_diet":"~0.1–0.3 mg ↓","warning":null}],"Enzogenol® NZ Pine Bark":[{"blend":"rise","category":"Botanicals","dose":"60 mg","rdi":"20–450 mg/day","rdi_pct":30,"typical_diet":"~0","warning":null}],"NMN":[{"blend":"rise","category":"Nutraceuticals","dose":"250 mg","rdi":"250–500 mg/day","rdi_pct":50,"typical_diet":"~0 mg","warning":null}],"Sunfiber® Prebiotics":[{"blend":"rise","category":"Probiotics & Prebiotics","dose":"3000 mg","rdi":"5,000–21,000 mg","rdi_pct":25,"typical_diet":"~2,000–5,000 mg","warning":null}],"Calcium (Aquamin™)":[{"blend":"rise","category":"Minerals","dose":"200 mg","rdi":"1,000 mg/day","rdi_pct":20,"typical_diet":"~700–850 mg ↓","warning":null}],"Iron":[{"blend":"rise","category":"Minerals","dose":"9 mg","rdi":"18 mg/day","rdi_pct":50,"typical_diet":"~9–10 mg ↓","warning":null}],"L-Theanine":[{"blend":"rest","category":"Nutraceuticals","dose":"200 mg","rdi":"100–400 mg/day","rdi_pct":50,"typical_diet":"~20–50 mg ↓","warning":null}],"Magnesium Citrate":[{"blend":"rest","category":"Minerals","dose":"80 mg","rdi":"320 mg/day","rdi_pct":25,"typical_diet":"~200–250 mg ↓","warning":null}],"Ashwagandha Sensoril®":[{"blend":"rest","category":"Botanicals","dose":"125 mg","rdi":"125–250 mg/day","rdi_pct":50,"typical_diet":"~0","warning":"Liver-injury warning required (TGA)"}],"Zinc":[{"blend":"rest","category":"Minerals","dose":"8 mg","rdi":"8 mg/day","rdi_pct":100,"typical_diet":"~7–9 mg","warning":null}],"Passionflower":[{"blend":"rest","category":"Botanicals","dose":"62.4 mg","rdi":"250–2,000 mg DHE","rdi_pct":10,"typical_diet":"~0","warning":null}],"Valerian Root":[{"blend":"rest","category":"Botanicals","dose":"160 mg","rdi":"300–600 mg DHE","rdi_pct":30,"typical_diet":"~0","warning":null}],"Hops Extract":[{"blend":"rest","category":"Botanicals","dose":"20 mg","rdi":"60–500 mg DHE","rdi_pct":20,"typical_diet":"~0","warning":null}],"Lemon Balm":[{"blend":"rest","category":"Botanicals","dose":"180 mg","rdi":"300–900 mg DHE","rdi_pct":50,"typical_diet":"~0","warning":null}]},"benefits":[{"title":"Brain Function","slug":"brain-function","blend":"rise","description":"Supports healthy cognitive function, mental focus, and nervous system health.","display_order":1,"ingredient_names":["PQQ","NMN","Enzogenol® NZ Pine Bark","Vitamin B12","Folate (Vitamin B9)"]},{"title":"Energy","slug":"energy","blend":"rise","description":"Supports cellular energy production and helps maintain a healthy metabolism.","display_order":2,"ingredient_names":["NMN","Iron"]},{"title":"Gut Health","slug":"gut-health","blend":"rise","description":"Provides daily prebiotic fibre and postbiotics to support digestive health and maintain a healthy microbiome.","display_order":3,"ingredient_names":["Sunfiber® Prebiotics"]},{"title":"Immunity","slug":"immunity","blend":"rise","description":"Supports a healthy immune system function and maintains the body's natural defenses.","display_order":4,"ingredient_names":["Vitamin C","Vitamin D3","Sunfiber® Prebiotics","Enzogenol® NZ Pine Bark","Vitamin A","Vitamin E"]},{"title":"Longevity","slug":"longevity","blend":"rise","description":"Formulated with powerful antioxidants to help reduce free radical damage to body cells and support general health.","display_order":5,"ingredient_names":["Trans-Resveratrol","PQQ","Enzogenol® NZ Pine Bark"]},{"title":"Mood","slug":"mood","blend":"rise","description":"Combines targeted gut-brain postbiotics and active B-vitamins to support healthy nervous system function and a balanced mood, while providing premium antioxidants and PQQ to maintain overall cognitive well-being.","display_order":6,"ingredient_names":["Folate (Vitamin B9)","Vitamin B12","Enzogenol® NZ Pine Bark","PQQ"]},{"title":"Mito-Active™ Complex","slug":"mito-active-complex","blend":"rise","description":"A targeted cellular energy blend designed to support healthy mitochondrial function and promote the production of NAD+—a vital cellular coenzyme essential for converting nutrients into sustained ATP energy. Provides robust antioxidant support for healthy aging.","display_order":7,"ingredient_names":["PQQ","NMN"]},{"title":"Adrenal Restore","slug":"adrenal-restore","blend":"rest","description":"Formulated to support the HPA-AXIS to help modulate the body's natural stress response and encourages evening physical and mental relaxation.","display_order":8,"ingredient_names":["Ashwagandha Sensoril®","L-Theanine","Lemon Balm","Passionflower"]},{"title":"Hormonal Balance","slug":"hormonal-balance","blend":"rest","description":"Supports healthy endocrine function and helps to maintain optimal cellular and hormonal balance during the rest cycle.","display_order":9,"ingredient_names":["Zinc","Magnesium Citrate"]},{"title":"Sleep","slug":"sleep","blend":"rest","description":"Promotes deep restorative sleep and supports the bodies natural overnight cellular recovery.","display_order":10,"ingredient_names":["L-Theanine","Ashwagandha Sensoril®"]}],"page_metafields":{"hero_intro":"The element³ protocol is the result of a rigorous selection process — only the most bioavailable, clinically-vetted compounds were chosen to support the specific complexities of female physiology. We believe in radical transparency, because understanding how your body works is the first step in reclaiming how it feels.","stat_ingredients":29,"stat_blends":2,"stat_studies":72,"sources_html":"<p><strong>RDI/AI values:</strong> NHMRC Nutrient Reference Values for Australia and New Zealand, v1.2 (2017). <a href=\"https://www.nhmrc.gov.au/sites/default/files/images/nutrient-refererence-dietary-intakes.pdf\" target=\"_blank\" rel=\"noopener\">nhmrc.gov.au</a></p>\n<p>For herbal and nutraceutical ingredients, the regulatory figure shown is the TGA Maximum Permitted Daily Dose. <a href=\"https://www.tga.gov.au\" target=\"_blank\" rel=\"noopener\">tga.gov.au</a></p>\n<p><strong>Typical dietary intake estimates:</strong> ABS Australian Health Survey — Usual Nutrient Intakes 2011–12. <a href=\"https://www.abs.gov.au/statistics/health/food-and-nutrition/usual-nutrient-intakes/latest-release\" target=\"_blank\" rel=\"noopener\">abs.gov.au</a>. Supplemented by Rangan et al., <em>Nutrition &amp; Dietetics</em> 2016.</p>\n<p><strong>⚠ Ashwagandha (Sensoril®):</strong> TGA has received reports of liver injury associated with Withania somnifera. Mandatory warning required. <a href=\"https://www.tga.gov.au/safety/safety-monitoring-and-information/safety-alerts/medicines-containing-withania-somnifera-withania-ashwagandha\" target=\"_blank\" rel=\"noopener\">TGA safety alert</a>.</p>\n<p><strong>↓</strong> = most women fall below this level from diet alone. <strong>AI</strong> = Adequate Intake. <strong>DHE</strong> = Dry Herb Equivalent.</p>"}};
+
+let migrationLog = [];
+let migrationRunning = false;
+
+function logMigration(line, level) {
+  level = level || 'info';
+  migrationLog.push({ line, level, ts: new Date().toLocaleTimeString() });
+  if (state.view === 'migration') render();
+}
+
+async function goMigration() {
+  state.view = 'migration';
+  migrationLog = [];
+  render();
+}
+
+function renderMigration() {
+  const colors = { info: 'var(--text-sub)', success: 'var(--teal)', error: 'var(--red)', skip: 'var(--amber)' };
+  const icons = { info: '·', success: '✓', error: '✗', skip: '○' };
+
+  return `<div class="app">
+    <div class="header">
+      <div>
+        <a onclick="loadDashboard()" style="color:var(--text-sub);cursor:pointer;font-size:13px">← Back to Dashboard</a>
+        <h1 style="margin-top:4px">Migration · Our Ingredients hub</h1>
+        <div class="header-sub">One-shot setup for the new metaobject schema and launch data</div>
+      </div>
+      <button class="btn btn-primary" onclick="runMigration()" ${migrationRunning ? 'disabled' : ''}>${migrationRunning ? 'Running…' : '▶ Run Migration'}</button>
+    </div>
+
+    <div class="card">
+      <h2>What this does</h2>
+      <ol style="padding-left:20px;font-size:13px;color:var(--text-sub);line-height:1.7">
+        <li>Adds <code>blend_doses</code> JSON field to the existing <code>Ingredient</code> metaobject definition</li>
+        <li>Creates a new <code>Benefit</code> metaobject definition (6 fields: title, slug, blend, description, ingredients, display_order)</li>
+        <li>Creates 5 page metafield definitions under namespace <code>ingredients_hub</code></li>
+        <li>Populates <code>blend_doses</code> values for the 29 launch ingredients (Rise + Rest)</li>
+        <li>Creates 10 Benefit entries</li>
+      </ol>
+      <div class="card" style="background:var(--green-bg);border-color:#c5d0bb;margin-top:12px">
+        <strong style="font-size:13px">Safety</strong>
+        <p style="font-size:13px;margin-top:6px;color:var(--text-sub)">Idempotent. Each stage checks existence before creating. Re-running won't create duplicates. The migration only fills empty <code>blend_doses</code> fields — existing values are preserved.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Progress log</h2>
+      ${migrationLog.length === 0 ? '<div class="empty-state" style="padding:24px;font-size:13px">Click "Run Migration" to start.</div>' : `
+        <div style="font-family:monospace;font-size:12px;line-height:1.7;max-height:500px;overflow:auto;padding:8px;background:#fafafa;border-radius:6px">
+          ${migrationLog.map(e => `<div style="color:${colors[e.level]||colors.info}"><span style="opacity:.5">${e.ts}</span> ${icons[e.level]||'·'} ${esc(e.line)}</div>`).join('')}
+        </div>`}
+    </div>
+  </div>`;
+}
+
+async function runMigration() {
+  if (migrationRunning) return;
+  migrationRunning = true;
+  migrationLog = [];
+  render();
+
+  try {
+    logMigration('Starting migration…', 'info');
+
+    logMigration('Stage 1/5: Ensuring blend_doses field on Ingredient metaobject…', 'info');
+    await ensureBlendDosesField();
+
+    logMigration('Stage 2/5: Ensuring Benefit metaobject definition…', 'info');
+    const benefitDefId = await ensureBenefitDefinition();
+
+    logMigration('Stage 3/5: Ensuring ingredients_hub page metafield definitions…', 'info');
+    await ensureHubMetafieldDefinitions();
+
+    logMigration('Stage 4/5: Populating blend_doses for launch ingredients…', 'info');
+    await populateBlendDoses();
+
+    logMigration('Stage 5/5: Creating Benefit entries…', 'info');
+    await createBenefitEntries(benefitDefId);
+
+    logMigration('Migration complete. Reload your Our Ingredients page.', 'success');
+    toast('Migration completed successfully');
+  } catch (e) {
+    logMigration('Migration halted: ' + e.message, 'error');
+    toast('Migration failed — see log', 'error');
+  } finally {
+    migrationRunning = false;
+    render();
+  }
+}
+
+async function ensureBlendDosesField() {
+  const def = await fetchDefinition();
+  const existing = (def.fieldDefinitions || []).find(f => f.key === 'blend_doses');
+  if (existing) {
+    logMigration('blend_doses field already present — skipping', 'skip');
+    return;
+  }
+  await addField(def.id, {
+    key: 'blend_doses',
+    name: 'Blend doses',
+    description: 'Per-blend dose, RDI, regulatory max, and typical-diet data. Array of {blend, category, dose, rdi, rdi_pct, typical_diet, warning} objects.',
+    type: 'json',
+  });
+  logMigration('blend_doses field added to Ingredient definition', 'success');
+}
+
+async function ensureBenefitDefinition() {
+  const lookup = await gql(`{ metaobjectDefinitionByType(type: "benefit") { id type fieldDefinitions { key name type { name } } } }`);
+  if (lookup.metaobjectDefinitionByType) {
+    logMigration('Benefit metaobject definition already exists — skipping', 'skip');
+    return lookup.metaobjectDefinitionByType.id;
+  }
+
+  const ingredientDef = await fetchDefinition();
+  const ingredientDefId = ingredientDef.id;
+
+  const data = await gql(`
+    mutation CreateDef($definition: MetaobjectDefinitionCreateInput!) {
+      metaobjectDefinitionCreate(definition: $definition) {
+        metaobjectDefinition { id type fieldDefinitions { key name type { name } } }
+        userErrors { field message code }
+      }
+    }
+  `, {
+    definition: {
+      name: "Benefit",
+      type: "benefit",
+      access: { storefront: "PUBLIC_READ" },
+      capabilities: { publishable: { enabled: true } },
+      fieldDefinitions: [
+        { key: "title", name: "Title", type: "single_line_text_field", required: true },
+        { key: "slug", name: "Slug", type: "single_line_text_field", required: true },
+        { key: "blend", name: "Blend", type: "single_line_text_field", required: true,
+          description: "One of: rise, reset, rest" },
+        { key: "description", name: "Description", type: "multi_line_text_field" },
+        { key: "display_order", name: "Display order", type: "number_integer" },
+        { key: "ingredients", name: "Ingredients", type: "list.metaobject_reference",
+          validations: [{ name: "metaobject_definition_id", value: ingredientDefId }] },
+      ],
+    },
+  });
+
+  const errs = data.metaobjectDefinitionCreate.userErrors || [];
+  if (errs.length) throw new Error('Benefit definition: ' + errs.map(e => e.message).join('; '));
+
+  const newDef = data.metaobjectDefinitionCreate.metaobjectDefinition;
+  logMigration('Benefit metaobject definition created with 6 fields', 'success');
+  return newDef.id;
+}
+
+async function ensureHubMetafieldDefinitions() {
+  const NS = 'ingredients_hub';
+  const wanted = [
+    { key: 'hero_intro', name: 'Hero intro', type: 'multi_line_text_field',
+      description: 'Hero paragraph on Our Ingredients hub' },
+    { key: 'stat_ingredients', name: 'Stat: ingredients', type: 'number_integer',
+      description: 'Headline stat — total active ingredients' },
+    { key: 'stat_blends', name: 'Stat: blends', type: 'number_integer',
+      description: 'Headline stat — number of daily blends' },
+    { key: 'stat_studies', name: 'Stat: studies', type: 'number_integer',
+      description: 'Headline stat — total studies reviewed' },
+    { key: 'sources_html', name: 'Sources & notes (HTML)', type: 'multi_line_text_field',
+      description: 'Footnotes block at the bottom of the blend tables' },
+  ];
+
+  const existing = await gql(`
+    { metafieldDefinitions(first: 100, ownerType: PAGE, namespace: "${NS}") {
+        edges { node { key name type { name } } }
+    } }
+  `);
+  const have = new Set((existing.metafieldDefinitions.edges || []).map(e => e.node.key));
+
+  for (const f of wanted) {
+    if (have.has(f.key)) {
+      logMigration(`metafield ${NS}.${f.key} already exists — skipping`, 'skip');
+      continue;
+    }
+    const data = await gql(`
+      mutation CreateMfd($definition: MetafieldDefinitionInput!) {
+        metafieldDefinitionCreate(definition: $definition) {
+          createdDefinition { id key namespace }
+          userErrors { field message code }
+        }
+      }
+    `, {
+      definition: {
+        name: f.name,
+        namespace: NS,
+        key: f.key,
+        type: f.type,
+        ownerType: "PAGE",
+        description: f.description || '',
+        access: { admin: "MERCHANT_READ_WRITE", storefront: "PUBLIC_READ" },
+      },
+    });
+    const errs = data.metafieldDefinitionCreate.userErrors || [];
+    if (errs.length) throw new Error(`metafield ${f.key}: ` + errs.map(e => e.message).join('; '));
+    logMigration(`metafield ${NS}.${f.key} created`, 'success');
+  }
+
+  const pageRes = await gql(`{ pages(first: 50) { edges { node { id handle title } } } }`);
+  const pageEdge = (pageRes.pages.edges || []).find(e => /our.?ingredients/i.test(e.node.handle));
+  if (!pageEdge) {
+    logMigration('Could not find Page with handle "our-ingredients" — skipping value population. Create the page in Shopify admin then re-run migration.', 'error');
+    return;
+  }
+  const pageId = pageEdge.node.id;
+
+  const valuesByKey = {
+    hero_intro: MIGRATION_DATA.page_metafields.hero_intro,
+    stat_ingredients: String(MIGRATION_DATA.page_metafields.stat_ingredients),
+    stat_blends: String(MIGRATION_DATA.page_metafields.stat_blends),
+    stat_studies: String(MIGRATION_DATA.page_metafields.stat_studies),
+    sources_html: MIGRATION_DATA.page_metafields.sources_html,
+  };
+  const typesByKey = {
+    hero_intro: 'multi_line_text_field',
+    stat_ingredients: 'number_integer',
+    stat_blends: 'number_integer',
+    stat_studies: 'number_integer',
+    sources_html: 'multi_line_text_field',
+  };
+
+  const metafields = Object.keys(valuesByKey).map(k => ({
+    ownerId: pageId,
+    namespace: NS,
+    key: k,
+    type: typesByKey[k],
+    value: valuesByKey[k],
+  }));
+
+  const setRes = await gql(`
+    mutation SetMfs($metafields: [MetafieldsSetInput!]!) {
+      metafieldsSet(metafields: $metafields) {
+        metafields { id key namespace }
+        userErrors { field message code }
+      }
+    }
+  `, { metafields });
+
+  const setErrs = setRes.metafieldsSet.userErrors || [];
+  if (setErrs.length) {
+    logMigration('metafieldsSet warnings: ' + setErrs.map(e => `${e.field?.join('.')}: ${e.message}`).join('; '), 'error');
+  } else {
+    logMigration(`Set ${metafields.length} metafield values on page "${pageEdge.node.title}"`, 'success');
+  }
+}
+
+async function populateBlendDoses() {
+  const ingredients = await fetchIngredients();
+  const byCanonical = new Map();
+
+  for (const ing of ingredients) {
+    const candidates = [ing.name?.value, ing.displayName].filter(Boolean);
+    for (const c of candidates) byCanonical.set(c.trim(), ing);
+  }
+
+  let matched = 0, skipped = 0, failed = 0;
+  const missing = [];
+
+  for (const canonical of Object.keys(MIGRATION_DATA.ingredient_doses)) {
+    const doses = MIGRATION_DATA.ingredient_doses[canonical];
+    const ing = byCanonical.get(canonical);
+    if (!ing) {
+      missing.push(canonical);
+      continue;
+    }
+
+    let alreadySet = false;
+    try {
+      const single = await fetchIngredient(ing.id);
+      const f = (single.fields || []).find(x => x.key === 'blend_doses');
+      const val = f?.value;
+      if (val && val !== '' && val !== '[]' && val !== 'null') alreadySet = true;
+    } catch (e) { /* ignore */ }
+
+    if (alreadySet) {
+      logMigration(`blend_doses for "${canonical}" already set — skipping`, 'skip');
+      skipped++;
+      continue;
+    }
+
+    try {
+      await updateIngredient(ing.id, [{ key: 'blend_doses', value: JSON.stringify(doses) }]);
+      logMigration(`Set blend_doses on "${canonical}" (${doses.length} blend${doses.length>1?'s':''})`, 'success');
+      matched++;
+    } catch (e) {
+      logMigration(`Failed to update "${canonical}": ${e.message}`, 'error');
+      failed++;
+    }
+  }
+
+  if (missing.length) {
+    logMigration(`No metaobject found for: ${missing.join(', ')}. Add them with "+ New Ingredient" then re-run.`, 'error');
+  }
+  logMigration(`Stage 4 summary: ${matched} updated, ${skipped} skipped, ${failed} failed, ${missing.length} missing`, matched > 0 ? 'success' : 'info');
+}
+
+async function createBenefitEntries(benefitDefId) {
+  const ingredients = await fetchIngredients();
+  const byCanonical = new Map();
+  for (const ing of ingredients) {
+    if (ing.name?.value) byCanonical.set(ing.name.value.trim(), ing);
+    if (ing.displayName) byCanonical.set(ing.displayName.trim(), ing);
+  }
+
+  const existing = await gql(`
+    { metaobjects(type: "benefit", first: 50) {
+        edges { node { id handle slug: field(key: "slug") { value } } }
+    } }
+  `);
+  const existingSlugs = new Set();
+  for (const e of (existing.metaobjects?.edges || [])) {
+    const slug = e.node.slug?.value || e.node.handle;
+    if (slug) existingSlugs.add(slug);
+  }
+
+  let created = 0, skipped = 0, failed = 0;
+  const missingIngs = new Set();
+
+  for (const ben of MIGRATION_DATA.benefits) {
+    if (existingSlugs.has(ben.slug)) {
+      logMigration(`Benefit "${ben.title}" already exists — skipping`, 'skip');
+      skipped++;
+      continue;
+    }
+
+    const ingredientGids = [];
+    for (const name of (ben.ingredient_names || [])) {
+      const ing = byCanonical.get(name);
+      if (ing) ingredientGids.push(ing.id);
+      else missingIngs.add(name);
+    }
+
+    try {
+      const data = await gql(`
+        mutation Create($metaobject: MetaobjectCreateInput!) {
+          metaobjectCreate(metaobject: $metaobject) {
+            metaobject { id handle }
+            userErrors { field message code }
+          }
+        }
+      `, {
+        metaobject: {
+          type: "benefit",
+          handle: ben.slug,
+          capabilities: { publishable: { status: "ACTIVE" } },
+          fields: [
+            { key: "title", value: ben.title },
+            { key: "slug", value: ben.slug },
+            { key: "blend", value: ben.blend },
+            { key: "description", value: ben.description || '' },
+            { key: "display_order", value: String(ben.display_order || 99) },
+            { key: "ingredients", value: JSON.stringify(ingredientGids) },
+          ],
+        },
+      });
+      const errs = data.metaobjectCreate.userErrors || [];
+      if (errs.length) throw new Error(errs.map(e => e.message).join('; '));
+      logMigration(`Created benefit "${ben.title}" with ${ingredientGids.length} ingredients`, 'success');
+      created++;
+    } catch (e) {
+      logMigration(`Failed to create benefit "${ben.title}": ${e.message}`, 'error');
+      failed++;
+    }
+  }
+
+  if (missingIngs.size) {
+    logMigration(`Benefit ingredient names without matching metaobject: ${[...missingIngs].join(', ')}. They were skipped from the linked-ingredient lists.`, 'error');
+  }
+  logMigration(`Stage 5 summary: ${created} created, ${skipped} skipped, ${failed} failed`, created > 0 ? 'success' : 'info');
 }
 
 // ─── Boot ────────────────────────────────────────────────────────
