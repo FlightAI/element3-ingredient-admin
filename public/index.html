@@ -1176,7 +1176,6 @@ async function ensureHubMetafieldDefinitions() {
         type: f.type,
         ownerType: "PAGE",
         description: f.description || '',
-        access: { admin: "MERCHANT_READ_WRITE", storefront: "PUBLIC_READ" },
       },
     });
     const errs = data.metafieldDefinitionCreate.userErrors || [];
