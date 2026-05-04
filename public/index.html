@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>element³ Ingredient Admin</title>
+<style>
+  :root {
+    --green: #414B3B;
+    --green-light: #5a6650;
+    --green-bg: #f4f6f2;
+    --bg: #f6f6f7;
+    --white: #fff;
+    --border: #e3e3e3;
+    --text: #1a1a1a;
+    --text-sub: #6d7175;
+    --red: #d72c0d;
+    --red-bg: #fef2f2;
+    --amber: #b98900;
+    --amber-bg: #fdf7e3;
+    --teal: #00857c;
+    --teal-bg: #e0f5f5;
+    --radius: 10px;
+    --shadow: 0 1px 3px rgba(0,0,0,.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
+  button { font-family: inherit; cursor: pointer; }
+  input, textarea, select { font-family: inherit; font-size: 14px; }
+
+  /* Layout */
+  .app { max-width: 1200px; margin: 0 auto; padding: 24px; }
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+  .header h1 { font-size: 22px; font-weight: 600; }
+  .header-sub { color: var(--text-sub); font-size: 14px; }
+  .card { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; box-shadow: var(--shadow); }
+  .card h2 { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+  .row { display: flex; gap: 16px; flex-wrap: wrap; }
+  .row > * { flex: 1; min-width: 200px; }
+
+  /* Stats */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  .stat { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; text-align: center; }
+  .stat-num { font-size: 28px; font-weight: 700; }
+  .stat-label { font-size: 12px; color: var(--text-sub); margin-top: 2px; }
+  .stat-num.green { color: var(--teal); }
+  .stat-num.amber { color: var(--amber); }
+  .stat-num.red { color: var(--red); }
+
+  /* Buttons */
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border); background: var(--white); font-size: 13px; font-weight: 500; transition: all .15s; }
+  .btn:hover { background: #f1f1f1; }
+  .btn-primary { background: var(--green); color: #fff; border-color: var(--green); }
+  .btn-primary:hover { background: var(--green-light); }
+  .btn-danger { color: var(--red); border-color: #fecaca; }
+  .btn-danger:hover { background: var(--red-bg); }
+  .btn-sm { padding: 4px 10px; font-size: 12px; }
+  .btn-group { display: flex; gap: 8px; }
+
+  /* Forms */
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 4px; }
+  .field input, .field textarea, .field select {
+    width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--white); transition: border-color .15s;
+  }
+  .field input:focus, .field textarea:focus, .field select:focus { outline: none; border-color: var(--green); }
+  .field textarea { resize: vertical; min-height: 80px; }
+  .field .help { font-size: 11px; color: var(--text-sub); margin-top: 2px; }
+
+  /* Table */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 10px 12px; border-bottom: 2px solid var(--border); font-weight: 600; font-size: 12px; color: var(--text-sub); text-transform: uppercase; letter-spacing: .5px; }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:hover td { background: #fafafa; }
+  .name-link { color: var(--green); font-weight: 600; cursor: pointer; text-decoration: none; }
+  .name-link:hover { text-decoration: underline; }
+
+  /* Badges */
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .badge-green { background: var(--teal-bg); color: var(--teal); }
+  .badge-amber { background: var(--amber-bg); color: var(--amber); }
+  .badge-red { background: var(--red-bg); color: var(--red); }
+  .badge-tag { background: var(--green-bg); color: var(--green); margin-right: 4px; }
+
+  /* Progress bar */
+  .progress { height: 6px; background: #e5e5e5; border-radius: 3px; overflow: hidden; width: 100px; display: inline-block; vertical-align: middle; margin-right: 6px; }
+  .progress-fill { height: 100%; border-radius: 3px; transition: width .3s; }
+
+  /* Tabs */
+  .tabs { display: flex; border-bottom: 2px solid var(--border); margin-bottom: 20px; gap: 0; }
+  .tab { padding: 10px 20px; font-size: 14px; font-weight: 500; color: var(--text-sub); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all .15s; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--green); border-bottom-color: var(--green); }
+
+  /* Structured editors */
+  .item-card { border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 10px; background: #fafafa; }
+  .item-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .item-title { font-weight: 600; font-size: 13px; }
+  .item-actions { display: flex; gap: 4px; }
+
+  /* Rich text editor */
+  .rte-toolbar { display: flex; gap: 4px; padding: 6px; border: 1px solid var(--border); border-bottom: none; border-radius: 8px 8px 0 0; background: #f9f9f9; }
+  .rte-toolbar button { padding: 4px 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--white); font-size: 12px; font-weight: 600; }
+  .rte-toolbar button:hover { background: #eee; }
+  .rte-body { border: 1px solid var(--border); border-radius: 0 0 8px 8px; padding: 12px; min-height: 120px; outline: none; font-size: 14px; line-height: 1.7; }
+  .rte-body p { margin-bottom: 8px; }
+
+  /* Toast */
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); padding: 12px 24px; border-radius: 10px; color: #fff; font-weight: 500; font-size: 14px; z-index: 9999; animation: fadeIn .2s; }
+  .toast-success { background: var(--teal); }
+  .toast-error { background: var(--red); }
+  @keyframes fadeIn { from { opacity: 0; transform: translateX(-50%) translateY(10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+
+  /* Modal */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+  .modal { background: var(--white); border-radius: 14px; padding: 24px; width: 500px; max-width: 90vw; max-height: 85vh; overflow-y: auto; }
+  .modal h2 { margin-bottom: 16px; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+
+  /* Setup screen */
+  .setup { max-width: 520px; margin: 80px auto; text-align: center; }
+  .setup h1 { font-size: 24px; margin-bottom: 8px; }
+  .setup p { color: var(--text-sub); margin-bottom: 24px; }
+  .setup .card { text-align: left; }
+  .setup ol { padding-left: 20px; font-size: 14px; color: var(--text-sub); margin-bottom: 16px; }
+  .setup ol li { margin-bottom: 8px; }
+
+  /* Save bar */
+  .save-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--green); color: #fff; padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; z-index: 100; animation: slideUp .2s; }
+  .save-bar .btn { color: var(--green); background: #fff; border-color: #fff; }
+  .save-bar .btn-discard { background: transparent; color: #fff; border-color: rgba(255,255,255,.3); }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+  .loading { text-align: center; padding: 60px; color: var(--text-sub); }
+  .empty-state { text-align: center; padding: 40px; color: var(--text-sub); }
+
+  @media (max-width: 768px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .row { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// element³ Ingredient Admin — Single-file Shopify Admin Tool
+// ═══════════════════════════════════════════════════════════════════
+
+const STORE_DOMAIN = 'cf6huz-e6.myshopify.com';
+const API_VERSION = '2026-01';
+
+// ─── State ───────────────────────────────────────────────────────
+let state = {
+  view: 'setup', // setup | dashboard | editor | schema
+  token: localStorage.getItem('e3_token') || '',
+  storeDomain: localStorage.getItem('e3_store') || STORE_DOMAIN,
+  ingredients: [],
+  currentIngredient: null,
+  currentFields: {},
+  originalFields: {},
+  definition: null,
+  loading: false,
+  tab: 0,
+  search: '',
+  filter: 'all',
+  toast: null,
+};
+
+// Skip setup when served from a server (token is handled server-side by the proxy)
+const isServed = window.location.protocol !== 'file:' && window.location.hostname !== '';
+if (state.token || isServed) state.view = 'dashboard';
+
+// ─── Shopify GraphQL ─────────────────────────────────────────────
+async function gql(query, variables = {}) {
+  const directUrl = `https://${state.storeDomain}/admin/api/${API_VERSION}/graphql.json`;
+  const proxyUrl = `/api/graphql`;
+  // Use proxy when served from local server OR from Vercel (any non-file:// origin with /api/graphql available)
+  const useProxy = window.location.protocol !== 'file:' && window.location.hostname !== '';
+
+  let res;
+  try {
+    if (useProxy) {
+      // Use server-side proxy (local Node server or Vercel serverless function)
+      res = await fetch(proxyUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, variables }),
+      });
+    } else {
+      // Direct call (only works if CORS is allowed)
+      res = await fetch(directUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Shopify-Access-Token': state.token },
+        body: JSON.stringify({ query, variables }),
+      });
+    }
+  } catch (e) {
+    throw new Error('Connection failed. If opening this file directly, you need to run it via the included server. See the README or run: node server.js');
+  }
+  if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`);
+  const json = await res.json();
+  if (json.errors) throw new Error(json.errors.map(e => e.message).join('; '));
+  return json.data;
+}
+
+// ─── API Functions ───────────────────────────────────────────────
+async function fetchIngredients() {
+  let all = []; let cursor = null; let hasNext = true;
+  while (hasNext) {
+    const after = cursor ? `, after: "${cursor}"` : '';
+    const data = await gql(`{
+      metaobjects(type: "ingredient", first: 50${after}, sortKey: "display_name") {
+        edges { node {
+          id handle displayName updatedAt
+          capabilities { publishable { status } }
+          name: field(key: "name") { value }
+          slug: field(key: "slug") { value }
+          category: field(key: "category") { value }
+          blend_tags: field(key: "blend_tags") { value }
+          subtitle: field(key: "subtitle") { value }
+          study_count: field(key: "study_count") { value }
+          body_why: field(key: "body_why") { value }
+          body_relevant: field(key: "body_relevant") { value }
+          faq_items: field(key: "faq_items") { value }
+          research_articles: field(key: "research_articles") { value }
+          protocol_body: field(key: "protocol_body") { value }
+          closing_text: field(key: "closing_text") { value }
+          key_facts: field(key: "key_facts") { value }
+          food_sources: field(key: "food_sources") { value }
+          hero_image: field(key: "hero_image") { value }
+          seo_title: field(key: "seo_title") { value }
+          seo_description: field(key: "seo_description") { value }
+        } cursor }
+        pageInfo { hasNextPage }
+      }
+    }`);
+    const edges = data.metaobjects.edges;
+    all.push(...edges.map(e => e.node));
+    hasNext = data.metaobjects.pageInfo.hasNextPage;
+    if (edges.length) cursor = edges[edges.length - 1].cursor;
+  }
+  return all;
+}
+
+async function fetchIngredient(id) {
+  const data = await gql(`query($id:ID!){ metaobject(id:$id){ id handle displayName type updatedAt capabilities{publishable{status}} fields{key value type} } }`, { id });
+  return data.metaobject;
+}
+
+async function updateIngredient(id, fields) {
+  const data = await gql(`mutation($id:ID!,$m:MetaobjectUpdateInput!){ metaobjectUpdate(id:$id,metaobject:$m){ metaobject{id handle updatedAt fields{key value type}} userErrors{field message} } }`,
+    { id, m: { fields: fields.map(f => ({ key: f.key, value: f.value })), capabilities: { publishable: { status: "ACTIVE" } } } });
+  if (data.metaobjectUpdate.userErrors?.length) throw new Error(data.metaobjectUpdate.userErrors.map(e => e.message).join(', '));
+  return data.metaobjectUpdate.metaobject;
+}
+
+async function createIngredient(name, handle) {
+  const data = await gql(`mutation($m:MetaobjectCreateInput!){ metaobjectCreate(metaobject:$m){ metaobject{id handle displayName fields{key value type}} userErrors{field message} } }`,
+    { m: { type: "ingredient", handle, capabilities: { publishable: { status: "ACTIVE" } }, fields: [{ key: "name", value: name }, { key: "slug", value: handle }] } });
+  if (data.metaobjectCreate.userErrors?.length) throw new Error(data.metaobjectCreate.userErrors.map(e => e.message).join(', '));
+  return data.metaobjectCreate.metaobject;
+}
+
+async function deleteIngredient(id) {
+  const data = await gql(`mutation($id:ID!){ metaobjectDelete(id:$id){ deletedId userErrors{field message} } }`, { id });
+  if (data.metaobjectDelete.userErrors?.length) throw new Error(data.metaobjectDelete.userErrors.map(e => e.message).join(', '));
+}
+
+async function fetchDefinition() {
+  const data = await gql(`{ metaobjectDefinitionByType(type:"ingredient"){ id type fieldDefinitions{ key name description type{name} } access{storefront} } }`);
+  return data.metaobjectDefinitionByType;
+}
+
+async function addField(defId, field) {
+  const data = await gql(`mutation($id:ID!,$d:MetaobjectDefinitionUpdateInput!){ metaobjectDefinitionUpdate(id:$id,definition:$d){ metaobjectDefinition{id fieldDefinitions{key name type{name}}} userErrors{field message} } }`,
+    { id: defId, d: { fieldDefinitions: [{ create: { key: field.key, name: field.name, description: field.description || '', type: field.type } }] } });
+  if (data.metaobjectDefinitionUpdate.userErrors?.length) throw new Error(data.metaobjectDefinitionUpdate.userErrors.map(e => e.message).join(', '));
+  return data.metaobjectDefinitionUpdate.metaobjectDefinition;
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────
+const REQUIRED = ['name','slug','subtitle','category','blend_tags','body_why','body_relevant','key_facts','food_sources','faq_items','research_articles','protocol_body','closing_text','seo_title','seo_description'];
+
+function completeness(ing) {
+  let n = 0;
+  for (const k of REQUIRED) { const v = ing[k]?.value; if (v && v !== '[]' && v !== '{}' && v !== 'null') n++; }
+  return Math.round((n / REQUIRED.length) * 100);
+}
+
+function emptyFields(ing) {
+  return REQUIRED.filter(k => { const v = ing[k]?.value; return !v || v === '[]' || v === '{}' || v === 'null'; });
+}
+
+function toast(msg, type = 'success') {
+  state.toast = { msg, type };
+  render();
+  setTimeout(() => { state.toast = null; render(); }, 3000);
+}
+
+function richTextToHtml(json) {
+  if (!json) return '';
+  try {
+    const obj = JSON.parse(json);
+    return rNode(obj);
+  } catch { return json; }
+}
+
+function rNode(n) {
+  if (!n) return '';
+  if (n.type === 'text') { let t = esc(n.value || ''); if (n.bold) t = `<strong>${t}</strong>`; if (n.italic) t = `<em>${t}</em>`; return t; }
+  const ch = (n.children || []).map(rNode).join('');
+  if (n.type === 'root') return ch;
+  if (n.type === 'paragraph') return `<p>${ch}</p>`;
+  if (n.type === 'heading') return `<h${n.level||2}>${ch}</h${n.level||2}>`;
+  if (n.type === 'list') return n.listType === 'ordered' ? `<ol>${ch}</ol>` : `<ul>${ch}</ul>`;
+  if (n.type === 'list-item') return `<li>${ch}</li>`;
+  if (n.type === 'link') return `<a href="${esc(n.url||'')}">${ch}</a>`;
+  return ch;
+}
+
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function htmlToRichText(html) {
+  if (!html?.trim()) return '';
+  const div = document.createElement('div'); div.innerHTML = html;
+  const raw = [];
+  for (const c of div.childNodes) { const n = domToR(c); if (n) raw.push(n); }
+  if (!raw.length && html.trim()) raw.push({ type:'paragraph', children:[{type:'text',value:html.replace(/<[^>]*>/g,'')}] });
+  // Wrap bare inline nodes (text, link) in paragraphs — Shopify requires block-level root children
+  const blockTypes = new Set(['paragraph','heading','list']);
+  const children = [];
+  let inlineBuf = [];
+  function flushInline() { if (inlineBuf.length) { children.push({type:'paragraph',children:inlineBuf}); inlineBuf = []; } }
+  for (const n of raw) {
+    if (blockTypes.has(n.type)) { flushInline(); children.push(n); }
+    else { inlineBuf.push(n); }
+  }
+  flushInline();
+  // Remove empty paragraphs (children with only whitespace text nodes)
+  const cleaned = children.filter(n => {
+    if (n.type !== 'paragraph') return true;
+    return n.children && n.children.some(c => c.type !== 'text' || (c.value && c.value.trim()));
+  });
+  return JSON.stringify({ type:'root', children: cleaned.length ? cleaned : [{type:'paragraph',children:[{type:'text',value:''}]}] });
+}
+
+function domToR(el) {
+  if (el.nodeType === 3) { const t = el.textContent; return t.trim() ? { type:'text', value:t } : null; }
+  if (el.nodeType !== 1) return null;
+  const tag = el.tagName.toLowerCase();
+  const ch = Array.from(el.childNodes).map(domToR).filter(Boolean);
+  if (tag === 'p' || tag === 'div') return { type:'paragraph', children: ch.length ? ch : [{type:'text',value:''}] };
+  if (/^h[1-6]$/.test(tag)) return { type:'heading', level:+tag[1], children:ch };
+  if (tag === 'ul') return { type:'list', listType:'unordered', children:ch };
+  if (tag === 'ol') return { type:'list', listType:'ordered', children:ch };
+  if (tag === 'li') return { type:'list-item', children:ch };
+  if (tag === 'strong' || tag === 'b') return ch.map(c => ({...c, bold:true}))[0] || null;
+  if (tag === 'em' || tag === 'i') return ch.map(c => ({...c, italic:true}))[0] || null;
+  if (tag === 'a') return { type:'link', url:el.getAttribute('href')||'', children:ch };
+  if (tag === 'br') return { type:'text', value:'\n' };
+  return ch.length === 1 ? ch[0] : ch.length ? { type:'paragraph', children:ch } : null;
+}
+
+function safeJSON(val, fallback = []) { try { return JSON.parse(val || JSON.stringify(fallback)); } catch { return fallback; } }
+
+// ─── Render ──────────────────────────────────────────────────────
+function render() {
+  const app = document.getElementById('app');
+  if (state.view === 'setup') app.innerHTML = renderSetup();
+  else if (state.view === 'dashboard') app.innerHTML = renderDashboard();
+  else if (state.view === 'editor') app.innerHTML = renderEditor();
+  else if (state.view === 'schema') app.innerHTML = renderSchema();
+  if (state.toast) app.innerHTML += `<div class="toast toast-${state.toast.type}">${state.toast.msg}</div>`;
+}
+
+// ─── Setup Screen ────────────────────────────────────────────────
+function renderSetup() {
+  return `<div class="setup">
+    <h1>element³ Ingredient Admin</h1>
+    <p>Connect to your Shopify store to manage ingredient pages.</p>
+    <div class="card">
+      <h2>Setup</h2>
+      <ol>
+        <li>Go to <strong>Shopify Admin → Settings → Apps and sales channels</strong></li>
+        <li>Click <strong>Develop apps</strong> → <strong>Create an app</strong></li>
+        <li>Name it "Ingredient Admin"</li>
+        <li>Under <strong>Configuration → Admin API</strong>, enable:<br>
+          <code>read_metaobjects</code>, <code>write_metaobjects</code>, <code>read_content</code>, <code>write_content</code></li>
+        <li>Click <strong>Install app</strong> and copy the <strong>Admin API access token</strong></li>
+      </ol>
+      <div class="field">
+        <label>Store domain</label>
+        <input type="text" value="${state.storeDomain}" onchange="state.storeDomain=this.value" placeholder="your-store.myshopify.com">
+      </div>
+      <div class="field">
+        <label>Admin API access token</label>
+        <input type="password" value="${state.token}" onchange="state.token=this.value" placeholder="shpat_xxxxxxxxxxxxx">
+      </div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:8px" onclick="connectStore()">Connect</button>
+    </div>
+  </div>`;
+}
+
+async function connectStore() {
+  if (!state.token || !state.storeDomain) return;
+  state.loading = true; render();
+  try {
+    await gql(`{ shop { name } }`);
+    localStorage.setItem('e3_token', state.token);
+    localStorage.setItem('e3_store', state.storeDomain);
+    state.view = 'dashboard';
+    await loadDashboard();
+  } catch (e) {
+    toast('Connection failed: ' + e.message, 'error');
+    state.loading = false; render();
+  }
+}
+
+// ─── Dashboard ───────────────────────────────────────────────────
+async function loadDashboard() {
+  state.loading = true; state.view = 'dashboard'; render();
+  try {
+    state.ingredients = await fetchIngredients();
+  } catch (e) {
+    toast('Error loading ingredients: ' + e.message, 'error');
+  }
+  state.loading = false; render();
+}
+
+function renderDashboard() {
+  const ings = state.ingredients;
+  const complete = ings.filter(i => completeness(i) >= 90).length;
+  const partial = ings.filter(i => { const c = completeness(i); return c >= 50 && c < 90; }).length;
+  const sparse = ings.filter(i => completeness(i) < 50).length;
+
+  let filtered = [...ings];
+  if (state.search) { const q = state.search.toLowerCase(); filtered = filtered.filter(i => (i.name?.value||i.displayName||'').toLowerCase().includes(q)); }
+  if (state.filter === 'complete') filtered = filtered.filter(i => completeness(i) >= 90);
+  if (state.filter === 'incomplete') filtered = filtered.filter(i => completeness(i) < 90);
+  if (state.filter === 'draft') filtered = filtered.filter(i => i.capabilities?.publishable?.status !== 'ACTIVE');
+
+  return `<div class="app">
+    <div class="header">
+      <div>
+        <h1>Ingredient Admin</h1>
+        <div class="header-sub">${ings.length} active ingredients · element³</div>
+      </div>
+      <div class="btn-group">
+        <button class="btn" onclick="goSchema()">Manage Fields</button>
+        <button class="btn btn-primary" onclick="showNewModal()">+ New Ingredient</button>
+        <button class="btn btn-sm" onclick="disconnect()" title="Disconnect">Logout</button>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="stat-num">${ings.length}</div><div class="stat-label">Total</div></div>
+      <div class="stat"><div class="stat-num green">${complete}</div><div class="stat-label">Complete (90%+)</div></div>
+      <div class="stat"><div class="stat-num amber">${partial}</div><div class="stat-label">Partial</div></div>
+      <div class="stat"><div class="stat-num red">${sparse}</div><div class="stat-label">Needs attention</div></div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="margin-bottom:14px; align-items:center;">
+        <div style="flex:2"><input type="text" placeholder="Search ingredients..." value="${state.search}" oninput="state.search=this.value;render()" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px"></div>
+        <div style="flex:3">
+          <div class="btn-group">
+            ${['all','complete','incomplete','draft'].map(f =>
+              `<button class="btn btn-sm ${state.filter===f?'btn-primary':''}" onclick="state.filter='${f}';render()">${f==='all'?'All':f==='complete'?'Complete (90%+)':f==='incomplete'?'Incomplete':'Draft'}</button>`
+            ).join('')}
+          </div>
+        </div>
+        <div style="flex:0"><button class="btn btn-sm" onclick="loadDashboard()">↻ Refresh</button></div>
+      </div>
+
+      ${state.loading ? '<div class="loading">Loading ingredients...</div>' : filtered.length === 0 ? '<div class="empty-state">No ingredients found</div>' : `
+      <div class="table-wrap"><table>
+        <thead><tr><th>Name</th><th>Category</th><th>Blends</th><th>Completeness</th><th>Missing</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>${filtered.map(i => {
+          const pct = completeness(i);
+          const empty = emptyFields(i);
+          const name = i.name?.value || i.displayName || '—';
+          const cat = i.category?.value || '—';
+          let tags = []; try { tags = JSON.parse(i.blend_tags?.value || '[]'); } catch {}
+          const status = i.capabilities?.publishable?.status;
+          const color = pct >= 90 ? 'var(--teal)' : pct >= 50 ? 'var(--amber)' : 'var(--red)';
+          return `<tr>
+            <td><a class="name-link" onclick="openIngredient('${i.id}')">${name}</a></td>
+            <td style="color:var(--text-sub)">${cat}</td>
+            <td>${tags.map(t => `<span class="badge badge-tag">${t}</span>`).join('')}</td>
+            <td><div class="progress"><div class="progress-fill" style="width:${pct}%;background:${color}"></div></div><span style="font-size:12px;color:var(--text-sub)">${pct}%</span></td>
+            <td style="font-size:12px;color:var(--text-sub)">${empty.length ? empty.slice(0,3).join(', ')+(empty.length>3?' +'+( empty.length-3):'') : '<span class="badge badge-green">Complete</span>'}</td>
+            <td><span class="badge ${status==='ACTIVE'?'badge-green':'badge-amber'}">${status==='ACTIVE'?'Active':'Draft'}</span></td>
+            <td><button class="btn btn-sm" onclick="openIngredient('${i.id}')">Edit</button> <a class="btn btn-sm" href="https://element3.co.nz/pages/${i.slug?.value||i.handle}" target="_blank">View</a></td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table></div>`}
+    </div>
+  </div>`;
+}
+
+function disconnect() { localStorage.removeItem('e3_token'); state.token=''; state.view='setup'; render(); }
+
+// ─── New Ingredient Modal ────────────────────────────────────────
+function showNewModal() {
+  const overlay = document.createElement('div'); overlay.className = 'modal-overlay'; overlay.id = 'modal';
+  overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+  overlay.innerHTML = `<div class="modal">
+    <h2>Create New Ingredient</h2>
+    <div class="field"><label>Ingredient name</label><input type="text" id="new-name" placeholder="e.g. Magnesium Glycinate"></div>
+    <div class="field"><label>URL slug</label><input type="text" id="new-slug" placeholder="auto-generated from name"><div class="help">Used in the page URL: element3.co.nz/pages/[slug]</div></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="document.getElementById('modal').remove()">Cancel</button>
+      <button class="btn btn-primary" onclick="doCreate()">Create</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+
+async function doCreate() {
+  const name = document.getElementById('new-name').value.trim();
+  const slug = document.getElementById('new-slug').value.trim() || name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  if (!name) return;
+  try {
+    const ing = await createIngredient(name, slug);
+    document.getElementById('modal')?.remove();
+    toast('Created ' + name);
+    await openIngredient(ing.id);
+  } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
+// ─── Ingredient Editor ──────────────────────────────────────────
+async function openIngredient(id) {
+  state.loading = true; state.view = 'editor'; state.tab = 0; render();
+  try {
+    const ing = await fetchIngredient(id);
+    state.currentIngredient = ing;
+    const fields = {};
+    for (const f of ing.fields) fields[f.key] = f.value || '';
+    state.currentFields = fields;
+    state.originalFields = JSON.parse(JSON.stringify(fields));
+  } catch (e) { toast('Error: ' + e.message, 'error'); }
+  state.loading = false; render();
+}
+
+function updateField(key, value) {
+  state.currentFields[key] = value;
+  render();
+}
+
+function isDirty() {
+  return JSON.stringify(state.currentFields) !== JSON.stringify(state.originalFields);
+}
+
+function sanitizeRichText(jsonStr) {
+  if (!jsonStr || !jsonStr.trim()) return jsonStr;
+  try {
+    const obj = JSON.parse(jsonStr);
+    if (obj.type !== 'root' || !Array.isArray(obj.children)) return jsonStr;
+    const blockTypes = new Set(['paragraph','heading','list']);
+    const sanitized = [];
+    let inlineBuf = [];
+    function flushInline() { if (inlineBuf.length) { sanitized.push({type:'paragraph',children:inlineBuf}); inlineBuf = []; } }
+    for (const n of obj.children) {
+      if (blockTypes.has(n.type)) { flushInline(); sanitized.push(n); }
+      else { inlineBuf.push(n); }
+    }
+    flushInline();
+    // Remove empty paragraphs
+    const cleaned = sanitized.filter(n => {
+      if (n.type !== 'paragraph') return true;
+      return n.children && n.children.some(c => c.type !== 'text' || (c.value && c.value.trim()));
+    });
+    obj.children = cleaned.length ? cleaned : [{type:'paragraph',children:[{type:'text',value:''}]}];
+    return JSON.stringify(obj);
+  } catch { return jsonStr; }
+}
+
+const RICH_TEXT_FIELDS = new Set(['body_why','body_relevant','protocol_body','closing_text']);
+
+async function saveIngredient() {
+  // Sanitize all rich text fields before comparing/saving
+  for (const key of RICH_TEXT_FIELDS) {
+    if (state.currentFields[key]) state.currentFields[key] = sanitizeRichText(state.currentFields[key]);
+  }
+  const changed = Object.entries(state.currentFields)
+    .filter(([k, v]) => v !== state.originalFields[k])
+    .map(([key, value]) => ({ key, value }));
+  if (!changed.length) { toast('No changes to save'); return; }
+  try {
+    await updateIngredient(state.currentIngredient.id, changed);
+    state.originalFields = JSON.parse(JSON.stringify(state.currentFields));
+    toast('Saved successfully');
+    render();
+  } catch (e) { toast('Save failed: ' + e.message, 'error'); }
+}
+
+function discardChanges() {
+  state.currentFields = JSON.parse(JSON.stringify(state.originalFields));
+  render();
+}
+
+async function doDelete() {
+  if (!confirm('Permanently delete this ingredient? This cannot be undone.')) return;
+  try {
+    await deleteIngredient(state.currentIngredient.id);
+    toast('Deleted');
+    await loadDashboard();
+  } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
+const TABS = ['General', 'Body Content', 'Structured Data', 'SEO'];
+
+const CATEGORIES = ['Amino Acid','Vitamin','Mineral','Botanical','Adaptogen','Enzyme','Probiotic','Cofactor','Antioxidant','Other'];
+
+const ICON_KEYWORDS = ['','salmon','chicken','beef','eggs','milk','cheese','yoghurt','spinach','broccoli','kale','avocado','sweet-potato','mushroom','tomato','carrot','citrus','berries','banana','nuts','almonds','seeds','legumes','grains','rice','oats','green-tea','black-tea','seaweed','shellfish','liver'];
+
+function renderEditor() {
+  if (state.loading) return '<div class="app"><div class="loading">Loading...</div></div>';
+  const f = state.currentFields;
+  const ing = state.currentIngredient;
+  const name = f.name || 'Untitled';
+
+  let tabContent = '';
+  if (state.tab === 0) tabContent = renderGeneralTab(f);
+  else if (state.tab === 1) tabContent = renderBodyTab(f);
+  else if (state.tab === 2) tabContent = renderStructuredTab(f);
+  else if (state.tab === 3) tabContent = renderSeoTab(f);
+
+  const dirty = isDirty();
+
+  return `<div class="app" style="${dirty?'padding-bottom:70px':''}">
+    <div class="header">
+      <div>
+        <a onclick="loadDashboard()" style="color:var(--text-sub);cursor:pointer;font-size:13px">← Back to Dashboard</a>
+        <h1 style="margin-top:4px">${esc(name)}</h1>
+        <div class="header-sub">${ing?.handle||''} · Updated ${new Date(ing?.updatedAt).toLocaleDateString()}</div>
+      </div>
+      <div class="btn-group">
+        <a class="btn" href="https://element3.co.nz/pages/${f.slug||ing?.handle}" target="_blank">View Live</a>
+        <button class="btn btn-danger" onclick="doDelete()">Delete</button>
+      </div>
+    </div>
+
+    <div class="card" style="padding:0">
+      <div class="tabs">${TABS.map((t,i) => `<div class="tab ${state.tab===i?'active':''}" onclick="state.tab=${i};render()">${t}</div>`).join('')}</div>
+      <div style="padding:20px">${tabContent}</div>
+    </div>
+
+    ${dirty ? `<div class="save-bar">
+      <span>Unsaved changes</span>
+      <div class="btn-group">
+        <button class="btn btn-discard" onclick="discardChanges()">Discard</button>
+        <button class="btn" onclick="saveIngredient()">Save Changes</button>
+      </div>
+    </div>` : ''}
+  </div>`;
+}
+
+function textField(key, label, opts = {}) {
+  const val = state.currentFields[key] || '';
+  const id = 'f-' + key;
+  if (opts.type === 'select') {
+    return `<div class="field"><label>${label}</label><select id="${id}" onchange="updateField('${key}',this.value)">
+      <option value="">— Select —</option>${(opts.options||[]).map(o => `<option value="${o}" ${val===o?'selected':''}>${o}</option>`).join('')}
+    </select></div>`;
+  }
+  if (opts.multiline) {
+    return `<div class="field"><label>${label}</label><textarea id="${id}" rows="${opts.rows||4}" oninput="updateField('${key}',this.value)">${esc(val)}</textarea>${opts.help?`<div class="help">${opts.help}</div>`:''}</div>`;
+  }
+  return `<div class="field"><label>${label}</label><input type="${opts.inputType||'text'}" id="${id}" value="${esc(val)}" oninput="updateField('${key}',this.value)">${opts.help?`<div class="help">${opts.help}</div>`:''}</div>`;
+}
+
+function renderGeneralTab(f) {
+  let tags = []; try { tags = JSON.parse(f.blend_tags || '[]'); } catch {}
+  const knownFields = ['name','slug','subtitle','category','blend_tags','study_count','hero_image','body_why','body_relevant','protocol_body','closing_text','key_facts','food_sources','faq_items','research_articles','seo_title','seo_description'];
+  const extras = Object.keys(f).filter(k => !knownFields.includes(k));
+
+  return `
+    <div class="row">
+      <div>${textField('name', 'Ingredient Name')}</div>
+      <div>${textField('slug', 'URL Slug', { help: 'element3.co.nz/pages/[slug]' })}</div>
+    </div>
+    ${textField('subtitle', 'Subtitle / Intro', { multiline: true })}
+    <div class="row">
+      <div>${textField('category', 'Category', { type: 'select', options: CATEGORIES })}</div>
+      <div>${textField('study_count', 'Study Count', { inputType: 'number' })}</div>
+    </div>
+    <div class="field">
+      <label>Blend Tags</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+        ${tags.map(t => `<span class="badge badge-tag" style="font-size:13px;padding:4px 10px">${t} <span style="cursor:pointer;margin-left:4px" onclick="removeTag('${t}')">×</span></span>`).join('')}
+      </div>
+      <div style="display:flex;gap:6px">
+        ${['RISE','RESET','REST'].filter(b=>!tags.includes(b)).map(b => `<button class="btn btn-sm" onclick="addTag('${b}')">+ ${b}</button>`).join('')}
+      </div>
+    </div>
+    ${textField('hero_image', 'Hero Image (Shopify file GID)', { help: 'Paste the GID from Shopify Files' })}
+    ${extras.length ? `<hr style="margin:16px 0;border:none;border-top:1px solid var(--border)"><h2 style="font-size:14px;margin-bottom:12px">Custom Fields</h2>${extras.map(k => textField(k, k)).join('')}` : ''}
+  `;
+}
+
+function addTag(tag) {
+  let tags = []; try { tags = JSON.parse(state.currentFields.blend_tags || '[]'); } catch {}
+  if (!tags.includes(tag)) { tags.push(tag); updateField('blend_tags', JSON.stringify(tags)); }
+}
+function removeTag(tag) {
+  let tags = []; try { tags = JSON.parse(state.currentFields.blend_tags || '[]'); } catch {}
+  updateField('blend_tags', JSON.stringify(tags.filter(t => t !== tag)));
+}
+
+function renderBodyTab(f) {
+  return ['body_why','body_relevant','protocol_body','closing_text'].map(key => {
+    const labels = { body_why: 'Why this ingredient is in element³', body_relevant: 'Relevant at 35+', protocol_body: 'In the Protocol', closing_text: 'Closing Text' };
+    return renderRichEditor(key, labels[key]);
+  }).join('');
+}
+
+function renderRichEditor(key, label) {
+  const val = state.currentFields[key] || '';
+  const html = richTextToHtml(val);
+  const id = 'rte-' + key;
+  return `<div class="card" style="margin-bottom:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <strong style="font-size:14px">${label}</strong>
+      <div class="btn-group">
+        <button class="btn btn-sm" onclick="toggleRteMode('${key}','visual')" id="btn-vis-${key}">Visual</button>
+        <button class="btn btn-sm" onclick="toggleRteMode('${key}','json')" id="btn-json-${key}">JSON</button>
+      </div>
+    </div>
+    <div id="rte-visual-${key}">
+      <div class="rte-toolbar">
+        <button onclick="document.execCommand('bold')"><strong>B</strong></button>
+        <button onclick="document.execCommand('italic')"><em>I</em></button>
+        <button onclick="document.execCommand('insertUnorderedList')">• List</button>
+        <button onclick="document.execCommand('insertOrderedList')">1. List</button>
+        <button onclick="var u=prompt('URL:');if(u)document.execCommand('createLink',false,u)">Link</button>
+      </div>
+      <div class="rte-body" contenteditable="true" id="${id}" onblur="onRteBlur('${key}')">${html}</div>
+    </div>
+    <div id="rte-json-${key}" style="display:none">
+      <textarea style="width:100%;font-family:monospace;font-size:12px;padding:8px;border:1px solid var(--border);border-radius:8px;min-height:120px;resize:vertical" oninput="updateField('${key}',this.value)">${esc(val)}</textarea>
+    </div>
+    ${!val ? '<div class="help" style="margin-top:6px">No content yet. Start typing above.</div>' : ''}
+  </div>`;
+}
+
+function toggleRteMode(key, mode) {
+  document.getElementById('rte-visual-' + key).style.display = mode === 'visual' ? '' : 'none';
+  document.getElementById('rte-json-' + key).style.display = mode === 'json' ? '' : 'none';
+}
+
+function onRteBlur(key) {
+  const el = document.getElementById('rte-' + key);
+  if (!el) return;
+  const richJson = htmlToRichText(el.innerHTML);
+  state.currentFields[key] = richJson;
+  // Don't re-render here to avoid losing focus
+}
+
+function renderStructuredTab(f) {
+  return renderKeyFacts(f) + renderFoodSources(f) + renderFaqItems(f) + renderResearchArticles(f);
+}
+
+function renderKeyFacts(f) {
+  const items = safeJSON(f.key_facts);
+  return `<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <strong>Key Facts</strong><span style="font-size:12px;color:var(--text-sub)">${items.length} facts</span>
+    </div>
+    ${items.map((item, i) => `<div style="display:flex;gap:8px;margin-bottom:8px;align-items:start">
+      <div style="flex:1"><input placeholder="Label" value="${esc(item.label||'')}" oninput="updateJsonItem('key_facts',${i},'label',this.value)" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px"></div>
+      <div style="flex:2"><input placeholder="Value" value="${esc(item.value||'')}" oninput="updateJsonItem('key_facts',${i},'value',this.value)" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px"></div>
+      <button class="btn btn-sm" onclick="moveJsonItem('key_facts',${i},-1)" ${i===0?'disabled':''}>↑</button>
+      <button class="btn btn-sm" onclick="moveJsonItem('key_facts',${i},1)" ${i===items.length-1?'disabled':''}>↓</button>
+      <button class="btn btn-sm btn-danger" onclick="removeJsonItem('key_facts',${i})">×</button>
+    </div>`).join('')}
+    <button class="btn btn-sm" onclick="addJsonItem('key_facts',{label:'',value:''})">+ Add Key Fact</button>
+  </div>`;
+}
+
+function renderFoodSources(f) {
+  const items = safeJSON(f.food_sources);
+  return `<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <strong>Food Sources</strong><span style="font-size:12px;color:var(--text-sub)">${items.length} sources</span>
+    </div>
+    ${items.map((item, i) => `<div class="item-card">
+      <div style="display:flex;gap:8px;align-items:start">
+        <div style="flex:1"><label style="font-size:11px;color:var(--text-sub)">Food name</label><input value="${esc(item.label||'')}" oninput="updateJsonItem('food_sources',${i},'label',this.value)" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px"></div>
+        <div style="flex:1"><label style="font-size:11px;color:var(--text-sub)">Icon keyword</label><select onchange="updateJsonItem('food_sources',${i},'icon_keyword',this.value)" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px">
+          ${ICON_KEYWORDS.map(k => `<option value="${k}" ${(item.icon_keyword||'')===k?'selected':''}>${k||'— None —'}</option>`).join('')}
+        </select></div>
+        <div style="flex:0;padding-top:16px"><button class="btn btn-sm btn-danger" onclick="removeJsonItem('food_sources',${i})">×</button></div>
+      </div>
+    </div>`).join('')}
+    <button class="btn btn-sm" onclick="addJsonItem('food_sources',{label:'',icon_keyword:'',icon_image:null})">+ Add Food Source</button>
+  </div>`;
+}
+
+function renderFaqItems(f) {
+  const items = safeJSON(f.faq_items);
+  return `<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <strong>FAQ Items</strong><span style="font-size:12px;color:var(--text-sub)">${items.length} items</span>
+    </div>
+    ${items.map((item, i) => `<div class="item-card">
+      <div class="item-header">
+        <span class="item-title">FAQ #${i+1}</span>
+        <div class="item-actions">
+          <button class="btn btn-sm" onclick="moveJsonItem('faq_items',${i},-1)" ${i===0?'disabled':''}>↑</button>
+          <button class="btn btn-sm" onclick="moveJsonItem('faq_items',${i},1)" ${i===items.length-1?'disabled':''}>↓</button>
+          <button class="btn btn-sm btn-danger" onclick="removeJsonItem('faq_items',${i})">×</button>
+        </div>
+      </div>
+      <div class="field"><label>Question</label><input value="${esc(item.question||'')}" oninput="updateJsonItem('faq_items',${i},'question',this.value)" placeholder="e.g. What is L-Theanine?"></div>
+      <div class="field"><label>Answer (HTML)</label><textarea rows="3" oninput="updateJsonItem('faq_items',${i},'answer',this.value)" placeholder="<p>Answer text...</p>">${esc(item.answer||'')}</textarea><div class="help">Supports &lt;p&gt;, &lt;strong&gt;, &lt;em&gt;, &lt;a&gt;, &lt;ul&gt;, &lt;li&gt;</div></div>
+    </div>`).join('')}
+    <button class="btn btn-sm" onclick="addJsonItem('faq_items',{question:'',answer:''})">+ Add FAQ Item</button>
+  </div>`;
+}
+
+function renderResearchArticles(f) {
+  const items = safeJSON(f.research_articles);
+  return `<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <strong>Research Articles</strong><span style="font-size:12px;color:var(--text-sub)">${items.length} articles</span>
+    </div>
+    ${items.map((item, i) => `<div class="item-card">
+      <div class="item-header">
+        <span class="item-title">${esc(item.title) || 'Study #'+(i+1)+' (untitled)'}</span>
+        <div class="item-actions">
+          <button class="btn btn-sm" onclick="moveJsonItem('research_articles',${i},-1)" ${i===0?'disabled':''}>↑</button>
+          <button class="btn btn-sm" onclick="moveJsonItem('research_articles',${i},1)" ${i===items.length-1?'disabled':''}>↓</button>
+          <button class="btn btn-sm btn-danger" onclick="removeJsonItem('research_articles',${i})">×</button>
+        </div>
+      </div>
+      <div class="row">
+        <div>${`<div class="field"><label>Study title</label><input value="${esc(item.title||'')}" oninput="updateJsonItem('research_articles',${i},'title',this.value)"></div>`}</div>
+        <div>${`<div class="field"><label>Citation</label><input value="${esc(item.citation||'')}" oninput="updateJsonItem('research_articles',${i},'citation',this.value)" placeholder="Author et al. (2023)"></div>`}</div>
+      </div>
+      <div class="field"><label>URL</label><input type="url" value="${esc(item.url||'')}" oninput="updateJsonItem('research_articles',${i},'url',this.value)" placeholder="https://pubmed.ncbi.nlm.nih.gov/..."></div>
+      <div class="field"><label>Key finding</label><textarea rows="2" oninput="updateJsonItem('research_articles',${i},'key_finding',this.value)">${esc(item.key_finding||'')}</textarea></div>
+      <div class="field"><label>Why it's here</label><textarea rows="2" oninput="updateJsonItem('research_articles',${i},'why_here',this.value)">${esc(item.why_here||'')}</textarea></div>
+    </div>`).join('')}
+    <button class="btn btn-sm" onclick="addJsonItem('research_articles',{title:'',citation:'',url:'',key_finding:'',why_here:''})">+ Add Research Article</button>
+  </div>`;
+}
+
+// JSON array helpers
+function addJsonItem(key, template) {
+  const items = safeJSON(state.currentFields[key]);
+  items.push({...template});
+  updateField(key, JSON.stringify(items));
+}
+function removeJsonItem(key, index) {
+  const items = safeJSON(state.currentFields[key]);
+  items.splice(index, 1);
+  updateField(key, JSON.stringify(items));
+}
+function updateJsonItem(key, index, field, value) {
+  const items = safeJSON(state.currentFields[key]);
+  items[index] = { ...items[index], [field]: value };
+  state.currentFields[key] = JSON.stringify(items);
+  // Don't full re-render to keep focus — just mark dirty
+}
+function moveJsonItem(key, index, dir) {
+  const items = safeJSON(state.currentFields[key]);
+  const newIdx = index + dir;
+  if (newIdx < 0 || newIdx >= items.length) return;
+  [items[index], items[newIdx]] = [items[newIdx], items[index]];
+  updateField(key, JSON.stringify(items));
+}
+
+function renderSeoTab(f) {
+  return `
+    ${textField('seo_title', 'SEO Title', { help: 'Overrides the default page title in search results' })}
+    ${textField('seo_description', 'SEO Description', { multiline: true, rows: 3, help: 'Appears below the title in Google search results (max ~160 chars)' })}
+    <div class="card" style="background:var(--green-bg);border-color:#c5d0bb">
+      <strong style="font-size:13px">Google Preview</strong>
+      <div style="margin-top:10px;font-family:Arial,sans-serif">
+        <div style="font-size:18px;color:#1a0dab">${esc(f.seo_title || f.name || 'Ingredient Name')} — element³</div>
+        <div style="font-size:13px;color:#006621;margin:2px 0">element3.co.nz/pages/${esc(f.slug || 'ingredient-slug')}</div>
+        <div style="font-size:13px;color:#545454">${esc((f.seo_description||f.subtitle||'').substring(0, 160))}</div>
+      </div>
+    </div>
+  `;
+}
+
+// ─── Schema Manager ──────────────────────────────────────────────
+async function goSchema() {
+  state.loading = true; state.view = 'schema'; render();
+  try { state.definition = await fetchDefinition(); } catch (e) { toast('Error: ' + e.message, 'error'); }
+  state.loading = false; render();
+}
+
+function renderSchema() {
+  const def = state.definition;
+  const fields = def?.fieldDefinitions || [];
+
+  return `<div class="app">
+    <div class="header">
+      <div>
+        <a onclick="loadDashboard()" style="color:var(--text-sub);cursor:pointer;font-size:13px">← Back to Dashboard</a>
+        <h1 style="margin-top:4px">Field Schema</h1>
+        <div class="header-sub">Manage the ingredient metaobject definition</div>
+      </div>
+      <button class="btn btn-primary" onclick="showAddFieldModal()">+ Add New Field</button>
+    </div>
+
+    <div class="card">
+      ${state.loading ? '<div class="loading">Loading schema...</div>' : `
+      <table>
+        <thead><tr><th>Key</th><th>Display Name</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>${fields.map(f => `<tr>
+          <td><code style="background:#f0f0f0;padding:2px 6px;border-radius:4px;font-size:12px">${f.key}</code></td>
+          <td>${f.name}</td>
+          <td><span class="badge badge-tag">${f.type?.name||'—'}</span></td>
+          <td style="color:var(--text-sub);font-size:12px">${f.description||'—'}</td>
+        </tr>`).join('')}</tbody>
+      </table>`}
+    </div>
+
+    <div class="card" style="background:var(--green-bg);border-color:#c5d0bb">
+      <strong style="font-size:13px">Note</strong>
+      <p style="font-size:13px;margin-top:6px;color:var(--text-sub)">Adding a new field here creates it on the Shopify metaobject definition. It will appear in the ingredient editor under Custom Fields. To display it on the live site, the Liquid template also needs updating.</p>
+    </div>
+  </div>`;
+}
+
+function showAddFieldModal() {
+  const types = [
+    ['single_line_text_field','Single line text'],['multi_line_text_field','Multi-line text'],
+    ['rich_text_field','Rich text'],['number_integer','Number (integer)'],['number_decimal','Number (decimal)'],
+    ['json','JSON'],['boolean','Boolean'],['url','URL'],['date','Date'],
+    ['file_reference','File reference'],['list.single_line_text_field','Text list']
+  ];
+  const overlay = document.createElement('div'); overlay.className = 'modal-overlay'; overlay.id = 'modal';
+  overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+  overlay.innerHTML = `<div class="modal">
+    <h2>Add New Field</h2>
+    <div class="field"><label>Field key</label><input type="text" id="af-key" placeholder="e.g. dosage_notes"><div class="help">Lowercase, underscores only. Used in Liquid templates.</div></div>
+    <div class="field"><label>Display name</label><input type="text" id="af-name" placeholder="e.g. Dosage Notes"></div>
+    <div class="field"><label>Description (optional)</label><input type="text" id="af-desc" placeholder="What this field is for"></div>
+    <div class="field"><label>Field type</label><select id="af-type">${types.map(([v,l]) => `<option value="${v}">${l}</option>`).join('')}</select></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="document.getElementById('modal').remove()">Cancel</button>
+      <button class="btn btn-primary" onclick="doAddField()">Add Field</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+
+async function doAddField() {
+  const key = document.getElementById('af-key').value.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_');
+  const name = document.getElementById('af-name').value.trim();
+  const desc = document.getElementById('af-desc').value.trim();
+  const type = document.getElementById('af-type').value;
+  if (!key || !name) return;
+  try {
+    await addField(state.definition.id, { key, name, description: desc, type });
+    document.getElementById('modal')?.remove();
+    toast('Field "' + name + '" added');
+    await goSchema();
+  } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
+// ─── Boot ────────────────────────────────────────────────────────
+render();
+if (state.token) loadDashboard();
+</script>
+</body>
+</html>
