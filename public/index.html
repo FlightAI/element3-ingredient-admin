@@ -222,7 +222,6 @@ async function fetchIngredients() {
           category: field(key: "category") { value }
           blend_tags: field(key: "blend_tags") { value }
           subtitle: field(key: "subtitle") { value }
-          study_count: field(key: "study_count") { value }
           body_why: field(key: "body_why") { value }
           body_relevant: field(key: "body_relevant") { value }
           faq_items: field(key: "faq_items") { value }
@@ -616,7 +615,7 @@ async function doDelete() {
 
 const TABS = ['General', 'Body Content', 'Structured Data', 'SEO'];
 
-const CATEGORIES = ['Amino Acid','Vitamin','Mineral','Botanical','Adaptogen','Enzyme','Probiotic','Cofactor','Antioxidant','Other'];
+const CATEGORIES = ['Amino Acid','Vitamin','Mineral','Botanical','Adaptogen','Enzyme','Probiotic','Cofactor','Antioxidant','NAD⁺ / Mitochondrial','Other'];
 
 const ICON_KEYWORDS = ['','asparagus','avocado','bell-pepper','berries','broccoli','citrus','cocoa','dairy','eggs','fish','grains','grapes','hops','leafy-greens','legumes','mushroom','nuts-seeds','olive','poultry','red-meat','root-vegetable','tea','tropical-fruit'];
 function renderEditor() {
@@ -677,6 +676,9 @@ function textField(key, label, opts = {}) {
 
 function renderGeneralTab(f) {
   let tags = []; try { tags = JSON.parse(f.blend_tags || '[]'); } catch {}
+  // NOTE: 'study_count' is intentionally kept in knownFields (its input was removed
+  // as the field is no longer used). Keeping it here suppresses it from the
+  // "Custom Fields" section; remove it here and it resurfaces as an editable extra.
   const knownFields = ['name','slug','subtitle','category','blend_tags','study_count','hero_image','body_why','body_relevant','protocol_body','closing_text','key_facts','food_sources','faq_items','research_articles','seo_title','seo_description'];
   const extras = Object.keys(f).filter(k => !knownFields.includes(k));
 
@@ -686,10 +688,7 @@ function renderGeneralTab(f) {
       <div>${textField('slug', 'URL Slug', { help: 'element3.co.nz/pages/[slug]' })}</div>
     </div>
     ${textField('subtitle', 'Subtitle / Intro', { multiline: true })}
-    <div class="row">
-      <div>${textField('category', 'Category', { type: 'select', options: CATEGORIES })}</div>
-      <div>${textField('study_count', 'Study Count', { inputType: 'number' })}</div>
-    </div>
+    ${textField('category', 'Category', { type: 'select', options: CATEGORIES })}
     <div class="field">
       <label>Blend Tags</label>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
