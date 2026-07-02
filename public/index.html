@@ -927,7 +927,7 @@ function renderSeoTab(f) {
     <div class="card" style="background:var(--green-bg);border-color:#c5d0bb">
       <strong style="font-size:13px">Google Preview</strong>
       <div style="margin-top:10px;font-family:Arial,sans-serif">
-        <div style="font-size:18px;color:#1a0dab">${esc(f.seo_title || f.name || 'Ingredient Name')} — element³</div>
+        <div style="font-size:18px;color:#1a0dab">${esc(f.seo_title || f.name || 'Ingredient Name')}</div>
         <div style="font-size:13px;color:#006621;margin:2px 0">element3.co.nz/pages/${esc(f.slug || 'ingredient-slug')}</div>
         <div style="font-size:13px;color:#545454">${esc((f.seo_description||f.subtitle||'').substring(0, 160))}</div>
       </div>
