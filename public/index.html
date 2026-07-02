@@ -632,7 +632,7 @@ function renderEditor() {
 
   const dirty = isDirty();
 
-  return `<div class="app" style="${dirty?'padding-bottom:70px':''}">
+  return `<div class="app">
     <div class="header">
       <div>
         <a onclick="loadDashboard()" style="color:var(--text-sub);cursor:pointer;font-size:13px">← Back to Dashboard</a>
@@ -640,6 +640,8 @@ function renderEditor() {
         <div class="header-sub">${ing?.handle||''} · Updated ${new Date(ing?.updatedAt).toLocaleDateString()}</div>
       </div>
       <div class="btn-group">
+        ${dirty ? `<button class="btn" onclick="discardChanges()">Discard</button>` : ''}
+        <button class="btn ${dirty ? 'btn-primary' : ''}" onclick="saveIngredient()" ${!dirty ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}>Save Changes</button>
         <a class="btn" href="https://element3.co.nz/pages/${f.slug||ing?.handle}" target="_blank">View Live</a>
         <button class="btn btn-danger" onclick="doDelete()">Delete</button>
       </div>
@@ -649,14 +651,6 @@ function renderEditor() {
       <div class="tabs">${TABS.map((t,i) => `<div class="tab ${state.tab===i?'active':''}" onclick="state.tab=${i};render()">${t}</div>`).join('')}</div>
       <div style="padding:20px">${tabContent}</div>
     </div>
-
-    ${dirty ? `<div class="save-bar">
-      <span>Unsaved changes</span>
-      <div class="btn-group">
-        <button class="btn btn-discard" onclick="discardChanges()">Discard</button>
-        <button class="btn" onclick="saveIngredient()">Save Changes</button>
-      </div>
-    </div>` : ''}
   </div>`;
 }
 
@@ -668,10 +662,18 @@ function textField(key, label, opts = {}) {
       <option value="">— Select —</option>${(opts.options||[]).map(o => `<option value="${o}" ${val===o?'selected':''}>${o}</option>`).join('')}
     </select></div>`;
   }
-  if (opts.multiline) {
-    return `<div class="field"><label>${label}</label><textarea id="${id}" rows="${opts.rows||4}" onchange="updateField('${key}',this.value)">${esc(val)}</textarea>${opts.help?`<div class="help">${opts.help}</div>`:''}</div>`;
+
+  let labelHtml = label;
+  let onInputAttr = '';
+  if (opts.max) {
+    labelHtml = `<div style="display:flex;justify-content:space-between;align-items:center;"><span>${label}</span><span id="cnt-${id}" style="font-weight:normal;color:var(--text-sub);font-size:11px">${val.length} / ${opts.max}</span></div>`;
+    onInputAttr = `oninput="document.getElementById('cnt-${id}').innerText = this.value.length + ' / ${opts.max}'"`;
   }
-  return `<div class="field"><label>${label}</label><input type="${opts.inputType||'text'}" id="${id}" value="${esc(val)}" onchange="updateField('${key}',this.value)">${opts.help?`<div class="help">${opts.help}</div>`:''}</div>`;
+
+  if (opts.multiline) {
+    return `<div class="field"><label>${labelHtml}</label><textarea id="${id}" rows="${opts.rows||4}" ${onInputAttr} onchange="updateField('${key}',this.value)">${esc(val)}</textarea>${opts.help?`<div class="help">${opts.help}</div>`:''}</div>`;
+  }
+  return `<div class="field"><label>${labelHtml}</label><input type="${opts.inputType||'text'}" id="${id}" value="${esc(val)}" ${onInputAttr} onchange="updateField('${key}',this.value)">${opts.help?`<div class="help">${opts.help}</div>`:''}</div>`;
 }
 
 function renderGeneralTab(f) {
@@ -922,8 +924,8 @@ function moveJsonItem(key, index, dir) {
 
 function renderSeoTab(f) {
   return `
-    ${textField('seo_title', 'SEO Title', { help: 'Overrides the default page title in search results' })}
-    ${textField('seo_description', 'SEO Description', { multiline: true, rows: 3, help: 'Appears below the title in Google search results (max ~160 chars)' })}
+    ${textField('seo_title', 'SEO Title', { help: 'Overrides the default page title in search results', max: 70 })}
+    ${textField('seo_description', 'SEO Description', { multiline: true, rows: 3, help: 'Appears below the title in Google search results (max ~160 chars)', max: 160 })}
     <div class="card" style="background:var(--green-bg);border-color:#c5d0bb">
       <strong style="font-size:13px">Google Preview</strong>
       <div style="margin-top:10px;font-family:Arial,sans-serif">
