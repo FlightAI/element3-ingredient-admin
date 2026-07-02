@@ -466,7 +466,7 @@ function renderDashboard() {
 
     <div class="card">
       <div class="row" style="margin-bottom:14px; align-items:center;">
-        <div style="flex:2"><input type="text" placeholder="Search ingredients..." value="${state.search}" oninput="state.search=this.value;render()" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px"></div>
+        <div style="flex:2"><input type="text" placeholder="Search ingredients..." value="${state.search}" onchange="state.search=this.value;render()" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px"></div>
         <div style="flex:3">
           <div class="btn-group">
             ${['all','complete','incomplete','draft'].map(f =>
@@ -669,9 +669,9 @@ function textField(key, label, opts = {}) {
     </select></div>`;
   }
   if (opts.multiline) {
-    return `<div class="field"><label>${label}</label><textarea id="${id}" rows="${opts.rows||4}" oninput="updateField('${key}',this.value)">${esc(val)}</textarea>${opts.help?`<div class="help">${opts.help}</div>`:''}</div>`;
+    return `<div class="field"><label>${label}</label><textarea id="${id}" rows="${opts.rows||4}" onchange="updateField('${key}',this.value)">${esc(val)}</textarea>${opts.help?`<div class="help">${opts.help}</div>`:''}</div>`;
   }
-  return `<div class="field"><label>${label}</label><input type="${opts.inputType||'text'}" id="${id}" value="${esc(val)}" oninput="updateField('${key}',this.value)">${opts.help?`<div class="help">${opts.help}</div>`:''}</div>`;
+  return `<div class="field"><label>${label}</label><input type="${opts.inputType||'text'}" id="${id}" value="${esc(val)}" onchange="updateField('${key}',this.value)">${opts.help?`<div class="help">${opts.help}</div>`:''}</div>`;
 }
 
 function renderGeneralTab(f) {
@@ -730,7 +730,7 @@ function jsonField(key, label) {
         ${isValid ? '<span style="color:var(--teal);font-size:11px;font-weight:600">✓ valid</span>' : '<span style="color:var(--red);font-size:11px;font-weight:600">✗ invalid JSON</span>'}
       </span>
     </label>
-    <textarea id="${id}" rows="8" style="font-family:monospace;font-size:12px;line-height:1.5;${isValid?'':'border-color:var(--red)'}" oninput="updateField('${key}',this.value)">${esc(pretty)}</textarea>
+    <textarea id="${id}" rows="8" style="font-family:monospace;font-size:12px;line-height:1.5;${isValid?'':'border-color:var(--red)'}" onchange="updateField('${key}',this.value)">${esc(pretty)}</textarea>
     <div class="help">Edit the JSON directly. Click Format to pretty-print. Changes are saved when you click Save Changes.</div>
   </div>`;
 }
@@ -787,7 +787,7 @@ function renderRichEditor(key, label) {
       <div class="rte-body" contenteditable="true" id="${id}" onblur="onRteBlur('${key}')">${html}</div>
     </div>
     <div id="rte-json-${key}" style="display:none">
-      <textarea style="width:100%;font-family:monospace;font-size:12px;padding:8px;border:1px solid var(--border);border-radius:8px;min-height:120px;resize:vertical" oninput="updateField('${key}',this.value)">${esc(val)}</textarea>
+      <textarea style="width:100%;font-family:monospace;font-size:12px;padding:8px;border:1px solid var(--border);border-radius:8px;min-height:120px;resize:vertical" onchange="updateField('${key}',this.value)">${esc(val)}</textarea>
     </div>
     ${!val ? '<div class="help" style="margin-top:6px">No content yet. Start typing above.</div>' : ''}
   </div>`;
@@ -817,8 +817,8 @@ function renderKeyFacts(f) {
       <strong>Key Facts</strong><span style="font-size:12px;color:var(--text-sub)">${items.length} facts</span>
     </div>
     ${items.map((item, i) => `<div style="display:flex;gap:8px;margin-bottom:8px;align-items:start">
-      <div style="flex:1"><input placeholder="Label" value="${esc(item.label||'')}" oninput="updateJsonItem('key_facts',${i},'label',this.value)" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px"></div>
-      <div style="flex:2"><input placeholder="Value" value="${esc(item.value||'')}" oninput="updateJsonItem('key_facts',${i},'value',this.value)" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px"></div>
+      <div style="flex:1"><input placeholder="Label" value="${esc(item.label||'')}" onchange="updateJsonItem('key_facts',${i},'label',this.value)" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px"></div>
+      <div style="flex:2"><input placeholder="Value" value="${esc(item.value||'')}" onchange="updateJsonItem('key_facts',${i},'value',this.value)" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px"></div>
       <button class="btn btn-sm" onclick="moveJsonItem('key_facts',${i},-1)" ${i===0?'disabled':''}>↑</button>
       <button class="btn btn-sm" onclick="moveJsonItem('key_facts',${i},1)" ${i===items.length-1?'disabled':''}>↓</button>
       <button class="btn btn-sm btn-danger" onclick="removeJsonItem('key_facts',${i})">×</button>
@@ -835,7 +835,7 @@ function renderFoodSources(f) {
     </div>
     ${items.map((item, i) => `<div class="item-card">
       <div style="display:flex;gap:8px;align-items:start">
-        <div style="flex:1"><label style="font-size:11px;color:var(--text-sub)">Food name</label><input value="${esc(item.label||'')}" oninput="updateJsonItem('food_sources',${i},'label',this.value)" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px"></div>
+        <div style="flex:1"><label style="font-size:11px;color:var(--text-sub)">Food name</label><input value="${esc(item.label||'')}" onchange="updateJsonItem('food_sources',${i},'label',this.value)" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px"></div>
         <div style="flex:1"><label style="font-size:11px;color:var(--text-sub)">Icon keyword</label><select onchange="updateJsonItem('food_sources',${i},'icon_keyword',this.value)" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px">
           ${ICON_KEYWORDS.map(k => `<option value="${k}" ${(item.icon_keyword||'')===k?'selected':''}>${k||'— None —'}</option>`).join('')}
         </select></div>
@@ -861,8 +861,8 @@ function renderFaqItems(f) {
           <button class="btn btn-sm btn-danger" onclick="removeJsonItem('faq_items',${i})">×</button>
         </div>
       </div>
-      <div class="field"><label>Question</label><input value="${esc(item.question||'')}" oninput="updateJsonItem('faq_items',${i},'question',this.value)" placeholder="e.g. What is L-Theanine?"></div>
-      <div class="field"><label>Answer (HTML)</label><textarea rows="3" oninput="updateJsonItem('faq_items',${i},'answer',this.value)" placeholder="<p>Answer text...</p>">${esc(item.answer||'')}</textarea><div class="help">Supports &lt;p&gt;, &lt;strong&gt;, &lt;em&gt;, &lt;a&gt;, &lt;ul&gt;, &lt;li&gt;</div></div>
+      <div class="field"><label>Question</label><input value="${esc(item.question||'')}" onchange="updateJsonItem('faq_items',${i},'question',this.value)" placeholder="e.g. What is L-Theanine?"></div>
+      <div class="field"><label>Answer (HTML)</label><textarea rows="3" onchange="updateJsonItem('faq_items',${i},'answer',this.value)" placeholder="<p>Answer text...</p>">${esc(item.answer||'')}</textarea><div class="help">Supports &lt;p&gt;, &lt;strong&gt;, &lt;em&gt;, &lt;a&gt;, &lt;ul&gt;, &lt;li&gt;</div></div>
     </div>`).join('')}
     <button class="btn btn-sm" onclick="addJsonItem('faq_items',{question:'',answer:''})">+ Add FAQ Item</button>
   </div>`;
@@ -884,12 +884,12 @@ function renderResearchArticles(f) {
         </div>
       </div>
       <div class="row">
-        <div>${`<div class="field"><label>Study title</label><input value="${esc(item.title||'')}" oninput="updateJsonItem('research_articles',${i},'title',this.value)"></div>`}</div>
-        <div>${`<div class="field"><label>Citation</label><input value="${esc(item.citation||'')}" oninput="updateJsonItem('research_articles',${i},'citation',this.value)" placeholder="Author et al. (2023)"></div>`}</div>
+        <div>${`<div class="field"><label>Study title</label><input value="${esc(item.title||'')}" onchange="updateJsonItem('research_articles',${i},'title',this.value)"></div>`}</div>
+        <div>${`<div class="field"><label>Citation</label><input value="${esc(item.citation||'')}" onchange="updateJsonItem('research_articles',${i},'citation',this.value)" placeholder="Author et al. (2023)"></div>`}</div>
       </div>
-      <div class="field"><label>URL</label><input type="url" value="${esc(item.url||'')}" oninput="updateJsonItem('research_articles',${i},'url',this.value)" placeholder="https://pubmed.ncbi.nlm.nih.gov/..."></div>
-      <div class="field"><label>Key finding</label><textarea rows="2" oninput="updateJsonItem('research_articles',${i},'key_finding',this.value)">${esc(item.key_finding||'')}</textarea></div>
-      <div class="field"><label>Why it's here</label><textarea rows="2" oninput="updateJsonItem('research_articles',${i},'why_here',this.value)">${esc(item.why_here||'')}</textarea></div>
+      <div class="field"><label>URL</label><input type="url" value="${esc(item.url||'')}" onchange="updateJsonItem('research_articles',${i},'url',this.value)" placeholder="https://pubmed.ncbi.nlm.nih.gov/..."></div>
+      <div class="field"><label>Key finding</label><textarea rows="2" onchange="updateJsonItem('research_articles',${i},'key_finding',this.value)">${esc(item.key_finding||'')}</textarea></div>
+      <div class="field"><label>Why it's here</label><textarea rows="2" onchange="updateJsonItem('research_articles',${i},'why_here',this.value)">${esc(item.why_here||'')}</textarea></div>
     </div>`).join('')}
     <button class="btn btn-sm" onclick="addJsonItem('research_articles',{title:'',citation:'',url:'',key_finding:'',why_here:''})">+ Add Research Article</button>
   </div>`;
